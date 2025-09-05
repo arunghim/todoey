@@ -1,32 +1,28 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import Navbar from "@/app/components/NavBar";
 import TaskInput from "@/app/components/TaskInput";
 import TaskItem from "@/app/components/TaskItem";
-
-type Todo = {
-  id: number;
-  text: string;
-  completed: boolean;
-};
+import { Todo } from "@/app/types";
 
 export default function TodoPage() {
-  const [todos, setTodos] = useState<Todo[]>([]);
+  const [todos, setTodos] = useState<Todo[]>(() => {
+    if (typeof window !== "undefined") {
+      const stored = localStorage.getItem("todos");
+      return stored ? JSON.parse(stored) : [];
+    }
+    return [];
+  });
+
   const [input, setInput] = useState("");
 
-  // Save to localStorage
   useEffect(() => {
     localStorage.setItem("todos", JSON.stringify(todos));
   }, [todos]);
 
-  // Load from localStorage
-  useEffect(() => {
-    const storedTodos = localStorage.getItem("todos");
-    if (storedTodos) setTodos(JSON.parse(storedTodos));
-  }, []);
-
   const addTodo = () => {
-    if (input.trim() === "") return;
+    if (!input.trim()) return;
     setTodos([
       ...todos,
       { id: Date.now(), text: input.trim(), completed: false },
@@ -41,19 +37,19 @@ export default function TodoPage() {
   };
 
   const deleteTodo = (id: number) => {
-    setTodos(todos.filter((t) => t.id !== id));
+    setTodos(todos.map((t) => (t.id === id ? { ...t, deleted: true } : t)));
   };
 
   return (
     <div>
-      <h1>To-Do List</h1>
-      <TaskInput input={input} setInput={setInput} onAdd={addTodo} />
+      <Navbar />
       <div>
-        {todos.length === 0 ? (
-          <p>No Tasks</p>
-        ) : (
-          <ul>
-            {todos.map((todo) => (
+        <h1>To-Do List</h1>
+        <TaskInput input={input} setInput={setInput} onAdd={addTodo} />
+        <ul>
+          {todos
+            .filter((t) => !t.completed && !t.deleted)
+            .map((todo) => (
               <TaskItem
                 key={todo.id}
                 id={todo.id}
@@ -63,8 +59,7 @@ export default function TodoPage() {
                 onDelete={deleteTodo}
               />
             ))}
-          </ul>
-        )}
+        </ul>
       </div>
     </div>
   );
